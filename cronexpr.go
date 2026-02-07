@@ -4,6 +4,7 @@ package cronexpr
 import (
 	"errors"
 	"slices"
+	"strings"
 	"time"
 )
 
@@ -48,8 +49,8 @@ func Parse(cronLine string) (*Expression, error) {
 		maxCronFields = 7
 	)
 
-	indices := fieldFinder.FindAllStringIndex(cron, -1)
-	fieldCount := len(indices)
+	fields := strings.Fields(cron)
+	fieldCount := len(fields)
 	if fieldCount < minCronFields {
 		return nil, errors.New("missing field(s)")
 	}
@@ -64,7 +65,7 @@ func Parse(cronLine string) (*Expression, error) {
 
 	// second field (optional)
 	if fieldCount == maxCronFields {
-		err = parseField(cron[indices[field][0]:indices[field][1]], secondDescriptor, &expr.secondList)
+		err = parseField(fields[field], secondDescriptor, &expr.secondList)
 		if err != nil {
 			return nil, err
 		}
@@ -74,35 +75,35 @@ func Parse(cronLine string) (*Expression, error) {
 	}
 
 	// minute field
-	err = parseField(cron[indices[field][0]:indices[field][1]], minuteDescriptor, &expr.minuteList)
+	err = parseField(fields[field], minuteDescriptor, &expr.minuteList)
 	if err != nil {
 		return nil, err
 	}
 	field++
 
 	// hour field
-	err = parseField(cron[indices[field][0]:indices[field][1]], hourDescriptor, &expr.hourList)
+	err = parseField(fields[field], hourDescriptor, &expr.hourList)
 	if err != nil {
 		return nil, err
 	}
 	field++
 
 	// day of month field
-	err = expr.domFieldHandler(cron[indices[field][0]:indices[field][1]])
+	err = expr.domFieldHandler(fields[field])
 	if err != nil {
 		return nil, err
 	}
 	field++
 
 	// month field
-	err = parseField(cron[indices[field][0]:indices[field][1]], monthDescriptor, &expr.monthList)
+	err = parseField(fields[field], monthDescriptor, &expr.monthList)
 	if err != nil {
 		return nil, err
 	}
 	field++
 
 	// day of week field
-	err = expr.dowFieldHandler(cron[indices[field][0]:indices[field][1]])
+	err = expr.dowFieldHandler(fields[field])
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func Parse(cronLine string) (*Expression, error) {
 
 	// year field
 	if field < fieldCount {
-		err = parseField(cron[indices[field][0]:indices[field][1]], yearDescriptor, &expr.yearList)
+		err = parseField(fields[field], yearDescriptor, &expr.yearList)
 		if err != nil {
 			return nil, err
 		}

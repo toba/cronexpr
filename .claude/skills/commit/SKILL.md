@@ -34,4 +34,4 @@ args: "[push]"
    - **Subject**: Lowercase, imperative mood (e.g., "add feature" not "Added feature")
    - **Description**: Explain the "why" and context. What problem does this solve? What approach was taken? Include relevant details about the implementation.
 
-The script handles: lint, test, stage, commit, and beanup sync. Push and release only happen when `PUSH=true`. Release workflow uses `softprops/action-gh-release` triggered by tag push.
+The script handles: lint, test, stage, commit. Push and release only happen when `PUSH=true`. Release workflow uses `softprops/action-gh-release` triggered by tag push.

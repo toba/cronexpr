@@ -3,11 +3,9 @@ package cronexpr
 import (
 	"fmt"
 	"maps"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 const (
@@ -69,100 +67,99 @@ var (
 	}
 )
 
-// atoi converts a numeric string to int using the pre-built numberTokens lookup table.
-func atoi(s string) int {
-	return numberTokens[s]
+type fieldDescriptor struct {
+	name        string
+	min, max    int
+	defaultList []int
+	atoi        func(string) (int, bool)
 }
 
-type fieldDescriptor struct {
-	name         string
-	min, max     int
-	defaultList  []int
-	valuePattern string
-	atoi         func(string) int
+// numberAtoi looks up a numeric string in the pre-built numberTokens table.
+func numberAtoi(s string) (int, bool) {
+	v, ok := numberTokens[s]
+	return v, ok
 }
 
 var (
 	secondDescriptor = fieldDescriptor{
-		name:         "second",
-		min:          0,
-		max:          59,
-		defaultList:  genericDefaultList[0:60],
-		valuePattern: `0?[0-9]|[1-5][0-9]`,
-		atoi:         atoi,
+		name:        "second",
+		min:         0,
+		max:         59,
+		defaultList: genericDefaultList[0:60],
+		atoi:        numberAtoi,
 	}
 	minuteDescriptor = fieldDescriptor{
-		name:         "minute",
-		min:          0,
-		max:          59,
-		defaultList:  genericDefaultList[0:60],
-		valuePattern: `0?[0-9]|[1-5][0-9]`,
-		atoi:         atoi,
+		name:        "minute",
+		min:         0,
+		max:         59,
+		defaultList: genericDefaultList[0:60],
+		atoi:        numberAtoi,
 	}
 	hourDescriptor = fieldDescriptor{
-		name:         "hour",
-		min:          0,
-		max:          23,
-		defaultList:  genericDefaultList[0:24],
-		valuePattern: `0?[0-9]|1[0-9]|2[0-3]`,
-		atoi:         atoi,
+		name:        "hour",
+		min:         0,
+		max:         23,
+		defaultList: genericDefaultList[0:24],
+		atoi:        numberAtoi,
 	}
 	domDescriptor = fieldDescriptor{
-		name:         "day-of-month",
-		min:          1,
-		max:          31,
-		defaultList:  genericDefaultList[1:32],
-		valuePattern: `0?[1-9]|[12][0-9]|3[01]`,
-		atoi:         atoi,
+		name:        "day-of-month",
+		min:         1,
+		max:         31,
+		defaultList: genericDefaultList[1:32],
+		atoi:        numberAtoi,
 	}
 	monthDescriptor = fieldDescriptor{
-		name:         "month",
-		min:          1,
-		max:          12,
-		defaultList:  genericDefaultList[1:13],
-		valuePattern: `0?[1-9]|1[012]|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|may|june|july|august|september|october|november|december`,
-		atoi: func(s string) int {
-			return monthTokens[s]
+		name:        "month",
+		min:         1,
+		max:         12,
+		defaultList: genericDefaultList[1:13],
+		atoi: func(s string) (int, bool) {
+			v, ok := monthTokens[s]
+			return v, ok
 		},
 	}
 	dowDescriptor = fieldDescriptor{
-		name:         "day-of-week",
-		min:          0,
-		max:          6,
-		defaultList:  genericDefaultList[0:7],
-		valuePattern: `0?[0-7]|sun|mon|tue|wed|thu|fri|sat|sunday|monday|tuesday|wednesday|thursday|friday|saturday`,
-		atoi: func(s string) int {
-			return dowTokens[s]
+		name:        "day-of-week",
+		min:         0,
+		max:         6,
+		defaultList: genericDefaultList[0:7],
+		atoi: func(s string) (int, bool) {
+			v, ok := dowTokens[s]
+			return v, ok
 		},
 	}
 	yearDescriptor = fieldDescriptor{
-		name:         "year",
-		min:          minYear,
-		max:          maxYear,
-		defaultList:  yearDefaultList,
-		valuePattern: `19[789][0-9]|20[0-9]{2}`,
-		atoi:         atoi,
+		name:        "year",
+		min:         minYear,
+		max:         maxYear,
+		defaultList: yearDefaultList,
+		atoi:        numberAtoi,
 	}
 )
 
-// Layout patterns for matching cron field entries. %value% is replaced with
-// the field-specific value pattern before compilation.
-var (
-	layoutWildcard            = `^\*$|^\?$`
-	layoutValue               = `^(%value%)$`
-	layoutRange               = `^(%value%)-(%value%)$`
-	layoutWildcardAndInterval = `^\*/(\d+)$`
-	layoutValueAndInterval    = `^(%value%)/(\d+)$`
-	layoutRangeAndInterval    = `^(%value%)-(%value%)/(\d+)$`
-	layoutLastDom             = `^l$`
-	layoutWorkdom             = `^(%value%)w$`
-	layoutLastWorkdom         = `^lw$`
-	layoutDowOfLastWeek       = `^(%value%)l$`
-	layoutDowOfSpecificWeek   = `^(%value%)#([1-5])$`
-	fieldFinder               = regexp.MustCompile(`\S+`)
-	entryFinder               = regexp.MustCompile(`[^,]+`)
-	layoutRegexp              sync.Map
-)
+// entrySpan represents a comma-separated entry within a cron field,
+// tracking its text and position within the original field string.
+type entrySpan struct {
+	text       string
+	start, end int
+}
+
+// splitEntries splits a cron field on commas, returning each entry with its
+// position in the original string.
+func splitEntries(s string) []entrySpan {
+	var spans []entrySpan
+	start := 0
+	for i := 0; i <= len(s); i++ {
+		if i == len(s) || s[i] == ',' {
+			if i > start {
+				spans = append(spans, entrySpan{s[start:i], start, i})
+			}
+			start = i + 1
+		}
+	}
+	return spans
+}
 
 // cronNormalizer expands predefined cron aliases into 7-field expressions.
 var cronNormalizer = strings.NewReplacer(
@@ -239,19 +236,26 @@ func (expr *Expression) dowFieldHandler(s string) error {
 		case none:
 			sdirective := s[directive.sbeg:directive.send]
 			snormal := strings.ToLower(sdirective)
-			// `5L`
-			pairs := makeLayoutRegexp(layoutDowOfLastWeek, dowDescriptor.valuePattern).FindStringSubmatchIndex(snormal)
-			if len(pairs) > 0 {
-				populateOne(expr.lastWeekDaysOfWeek, dowDescriptor.atoi(snormal[pairs[2]:pairs[3]]))
-			} else {
-				// `5#3`
-				pairs := makeLayoutRegexp(layoutDowOfSpecificWeek, dowDescriptor.valuePattern).FindStringSubmatchIndex(snormal)
-				if len(pairs) > 0 {
-					populateOne(expr.specificWeekDaysOfWeek, (dowDescriptor.atoi(snormal[pairs[4]:pairs[5]])-1)*7+(dowDescriptor.atoi(snormal[pairs[2]:pairs[3]])%7))
-				} else {
-					return fmt.Errorf("syntax error in day-of-week field: '%s'", sdirective)
+			// `5L` — last week's day-of-week
+			if strings.HasSuffix(snormal, "l") {
+				prefix := snormal[:len(snormal)-1]
+				if dow, ok := dowDescriptor.atoi(prefix); ok {
+					populateOne(expr.lastWeekDaysOfWeek, dow)
+					continue
 				}
 			}
+			// `5#3` — specific week's day-of-week
+			if hashIdx := strings.Index(snormal, "#"); hashIdx >= 0 {
+				dowStr := snormal[:hashIdx]
+				weekStr := snormal[hashIdx+1:]
+				dow, dowOk := dowDescriptor.atoi(dowStr)
+				week, weekErr := strconv.Atoi(weekStr)
+				if dowOk && weekErr == nil && week >= 1 && week <= 5 {
+					populateOne(expr.specificWeekDaysOfWeek, (week-1)*7+(dow%7))
+					continue
+				}
+			}
+			return fmt.Errorf("syntax error in day-of-week field: '%s'", sdirective)
 		case one:
 			populateOne(expr.daysOfWeek, directive.first)
 		case span:
@@ -283,22 +287,20 @@ func (expr *Expression) domFieldHandler(s string) error {
 		case none:
 			sdirective := s[directive.sbeg:directive.send]
 			snormal := strings.ToLower(sdirective)
-			// `L`
-			if makeLayoutRegexp(layoutLastDom, domDescriptor.valuePattern).MatchString(snormal) {
+			switch {
+			case snormal == "l":
 				expr.lastDayOfMonth = true
-			} else {
-				// `LW`
-				if makeLayoutRegexp(layoutLastWorkdom, domDescriptor.valuePattern).MatchString(snormal) {
-					expr.lastWorkdayOfMonth = true
+			case snormal == "lw":
+				expr.lastWorkdayOfMonth = true
+			case strings.HasSuffix(snormal, "w"):
+				prefix := snormal[:len(snormal)-1]
+				if dom, ok := domDescriptor.atoi(prefix); ok {
+					populateOne(expr.workdaysOfMonth, dom)
 				} else {
-					// `15W`
-					pairs := makeLayoutRegexp(layoutWorkdom, domDescriptor.valuePattern).FindStringSubmatchIndex(snormal)
-					if len(pairs) > 0 {
-						populateOne(expr.workdaysOfMonth, domDescriptor.atoi(snormal[pairs[2]:pairs[3]]))
-					} else {
-						return fmt.Errorf("syntax error in day-of-month field: '%s'", sdirective)
-					}
+					return fmt.Errorf("syntax error in day-of-month field: '%s'", sdirective)
 				}
+			default:
+				return fmt.Errorf("syntax error in day-of-month field: '%s'", sdirective)
 			}
 		case one:
 			populateOne(expr.daysOfMonth, directive.first)
@@ -353,25 +355,25 @@ func validateStep(step, maxVal int, raw string) error {
 	return nil
 }
 
-// genericFieldParse tokenizes a cron field string into directives by matching
-// each comma-separated entry against the layout patterns.
+// genericFieldParse tokenizes a cron field string into directives by splitting
+// on commas and parsing each entry with string operations.
 func genericFieldParse(s string, desc fieldDescriptor) ([]*cronDirective, error) {
-	indices := entryFinder.FindAllStringIndex(s, -1)
-	if len(indices) == 0 {
+	entries := splitEntries(s)
+	if len(entries) == 0 {
 		return nil, fmt.Errorf("%s field: missing directive", desc.name)
 	}
 
-	directives := make([]*cronDirective, 0, len(indices))
+	directives := make([]*cronDirective, 0, len(entries))
 
-	for i := range indices {
+	for _, entry := range entries {
 		directive := cronDirective{
-			sbeg: indices[i][0],
-			send: indices[i][1],
+			sbeg: entry.start,
+			send: entry.end,
 		}
-		snormal := strings.ToLower(s[indices[i][0]:indices[i][1]])
+		snormal := strings.ToLower(entry.text)
 
-		// `*`
-		if makeLayoutRegexp(layoutWildcard, desc.valuePattern).MatchString(snormal) {
+		// `*` or `?`
+		if snormal == "*" || snormal == "?" {
 			directive.kind = all
 			directive.first = desc.min
 			directive.last = desc.max
@@ -379,76 +381,81 @@ func genericFieldParse(s string, desc fieldDescriptor) ([]*cronDirective, error)
 			directives = append(directives, &directive)
 			continue
 		}
-		// `5`
-		if makeLayoutRegexp(layoutValue, desc.valuePattern).MatchString(snormal) {
-			directive.kind = one
-			directive.first = desc.atoi(snormal)
-			directives = append(directives, &directive)
-			continue
-		}
-		// `5-20`
-		pairs := makeLayoutRegexp(layoutRange, desc.valuePattern).FindStringSubmatchIndex(snormal)
-		if len(pairs) > 0 {
-			directive.kind = span
-			directive.first = desc.atoi(snormal[pairs[2]:pairs[3]])
-			directive.last = desc.atoi(snormal[pairs[4]:pairs[5]])
-			directive.step = 1
-			directives = append(directives, &directive)
-			continue
-		}
-		// `*/2`
-		pairs = makeLayoutRegexp(layoutWildcardAndInterval, desc.valuePattern).FindStringSubmatchIndex(snormal)
-		if len(pairs) > 0 {
-			directive.kind = span
-			directive.first = desc.min
-			directive.last = desc.max
-			directive.step = atoi(snormal[pairs[2]:pairs[3]])
-			if err := validateStep(directive.step, desc.max, snormal); err != nil {
+
+		// Try splitting on `/` for interval patterns.
+		if base, stepStr, hasStep := strings.Cut(snormal, "/"); hasStep {
+			step, err := strconv.Atoi(stepStr)
+			if err != nil {
+				directive.kind = none
+				directives = append(directives, &directive)
+				continue
+			}
+			if err := validateStep(step, desc.max, snormal); err != nil {
 				return nil, err
 			}
-			directives = append(directives, &directive)
-			continue
-		}
-		// `5/2`
-		pairs = makeLayoutRegexp(layoutValueAndInterval, desc.valuePattern).FindStringSubmatchIndex(snormal)
-		if len(pairs) > 0 {
-			directive.kind = span
-			directive.first = desc.atoi(snormal[pairs[2]:pairs[3]])
-			directive.last = desc.max
-			directive.step = atoi(snormal[pairs[4]:pairs[5]])
-			if err := validateStep(directive.step, desc.max, snormal); err != nil {
-				return nil, err
+
+			if base == "*" {
+				// `*/2`
+				directive.kind = span
+				directive.first = desc.min
+				directive.last = desc.max
+				directive.step = step
+				directives = append(directives, &directive)
+				continue
 			}
-			directives = append(directives, &directive)
-			continue
-		}
-		// `5-20/2`
-		pairs = makeLayoutRegexp(layoutRangeAndInterval, desc.valuePattern).FindStringSubmatchIndex(snormal)
-		if len(pairs) > 0 {
-			directive.kind = span
-			directive.first = desc.atoi(snormal[pairs[2]:pairs[3]])
-			directive.last = desc.atoi(snormal[pairs[4]:pairs[5]])
-			directive.step = atoi(snormal[pairs[6]:pairs[7]])
-			if err := validateStep(directive.step, desc.max, snormal); err != nil {
-				return nil, err
+			if lo, hi, hasRange := strings.Cut(base, "-"); hasRange {
+				// `5-20/2`
+				loVal, loOk := desc.atoi(lo)
+				hiVal, hiOk := desc.atoi(hi)
+				if loOk && hiOk {
+					directive.kind = span
+					directive.first = loVal
+					directive.last = hiVal
+					directive.step = step
+					directives = append(directives, &directive)
+					continue
+				}
+			} else {
+				// `5/2`
+				if val, ok := desc.atoi(base); ok {
+					directive.kind = span
+					directive.first = val
+					directive.last = desc.max
+					directive.step = step
+					directives = append(directives, &directive)
+					continue
+				}
 			}
+			directive.kind = none
 			directives = append(directives, &directive)
 			continue
 		}
+
+		// No `/` — try range or single value.
+		if lo, hi, hasRange := strings.Cut(snormal, "-"); hasRange {
+			// `5-20`
+			loVal, loOk := desc.atoi(lo)
+			hiVal, hiOk := desc.atoi(hi)
+			if loOk && hiOk {
+				directive.kind = span
+				directive.first = loVal
+				directive.last = hiVal
+				directive.step = 1
+				directives = append(directives, &directive)
+				continue
+			}
+		} else {
+			// `5`
+			if val, ok := desc.atoi(snormal); ok {
+				directive.kind = one
+				directive.first = val
+				directives = append(directives, &directive)
+				continue
+			}
+		}
+
 		directive.kind = none
 		directives = append(directives, &directive)
 	}
 	return directives, nil
-}
-
-// makeLayoutRegexp compiles a layout pattern with the field's value pattern
-// substituted in, caching the result for reuse.
-func makeLayoutRegexp(layout, value string) *regexp.Regexp {
-	layout = strings.ReplaceAll(layout, `%value%`, value)
-	if re, ok := layoutRegexp.Load(layout); ok {
-		return re.(*regexp.Regexp)
-	}
-	re := regexp.MustCompile(layout)
-	layoutRegexp.Store(layout, re)
-	return re
 }

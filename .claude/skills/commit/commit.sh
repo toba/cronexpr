@@ -39,53 +39,32 @@ echo "==> Creating commit..."
 git commit -m "$COMMIT_MSG"
 git status
 
-# Version tagging and release (only if PUSH=true)
+# Push and release
 CURRENT_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 if [ -n "$CURRENT_TAG" ]; then
     echo ""
     echo "==> Current version: $CURRENT_TAG"
+fi
 
-    if [ "$PUSH" = "true" ]; then
-        echo "==> Pushing commits..."
-        git push
+if [ "$PUSH" = "true" ]; then
+    echo "==> Pushing commits..."
+    git push
 
-        # If NEW_VERSION is set, create and push tag
-        # GitHub Actions release workflow will create the release automatically
-        if [ -n "$NEW_VERSION" ]; then
-            echo "==> Creating tag $NEW_VERSION..."
-            git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
+    # If NEW_VERSION is set, create and push tag
+    # GitHub Actions release workflow will create the release automatically
+    if [ -n "$NEW_VERSION" ]; then
+        echo "==> Creating tag $NEW_VERSION..."
+        git tag -a "$NEW_VERSION" -m "Release $NEW_VERSION"
 
-            echo "==> Pushing tag (GitHub Actions will create release)..."
-            git push origin "$NEW_VERSION"
-            echo "==> Tag $NEW_VERSION pushed, release workflow will create GitHub release"
-        else
-            echo "==> No NEW_VERSION set, skipping release"
-        fi
-    else
-        echo "==> Commit is local only (use PUSH=true to push and release)"
-        if [ -n "$NEW_VERSION" ]; then
-            echo "==> NEW_VERSION=$NEW_VERSION will be used when pushed"
-        fi
+        echo "==> Pushing tag (GitHub Actions will create release)..."
+        git push origin "$NEW_VERSION"
+        echo "==> Tag $NEW_VERSION pushed, release workflow will create GitHub release"
     fi
 else
-    echo "==> No existing tags, skipping version bump"
-    if [ "$PUSH" = "true" ]; then
-        echo "==> Pushing commits..."
-        git push
+    echo "==> Commit is local only (use PUSH=true to push and release)"
+    if [ -n "$NEW_VERSION" ]; then
+        echo "==> NEW_VERSION=$NEW_VERSION will be used when pushed"
     fi
 fi
-
-# Sync to ClickUp
-echo ""
-echo "==> Syncing beans to ClickUp..."
-beanup sync || echo "Warning: beanup sync failed or not available"
-
-# Include sync state changes in the commit
-if [ -n "$(git status --porcelain .beans/.sync.json 2>/dev/null)" ]; then
-    echo "Including .beans/.sync.json in commit..."
-    git add .beans/.sync.json
-    git commit --amend --no-edit
-fi
-
 echo ""
 echo "==> Done!"
