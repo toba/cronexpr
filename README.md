@@ -74,18 +74,25 @@ When 5 fields are given, seconds default to `0` and year defaults to `*`. When 6
 
 ## Extensions
 
-Beyond the standard `*`, `,`, `-`, and `/` operators, the following are supported:
+### Standard cron extensions
+
+These are widely supported across cron implementations (Vixie cron, busybox, etc.):
+
+- **Month names** -- `JAN`-`DEC` (case-insensitive); full names also accepted
+- **Day-of-week names** -- `SUN`-`SAT` (case-insensitive); full names also accepted; `7` is accepted as Sunday
+- **Wrap-around ranges** -- ranges where start > end wrap through the field boundary (e.g. `22-3` for hours means 22, 23, 0, 1, 2, 3)
+
+When both day-of-month and day-of-week are restricted (not `*`), a day matches if **either** field matches (union semantics, per the crontab spec).
+
+### Quartz Scheduler extensions
+
+These originate from [Quartz Scheduler](http://www.quartz-scheduler.org/documentation/quartz-2.3.0/tutorials/crontrigger.html) and are not part of standard cron:
 
 - **`L`** in day-of-month -- last day of the month
 - **`L`** in day-of-week -- last occurrence of that weekday in the month (e.g. `5L` = last Friday)
 - **`W`** in day-of-month -- nearest weekday to the given day (e.g. `15W`); single days only
 - **`LW`** in day-of-month -- last weekday (Mon-Fri) of the month
 - **`#`** in day-of-week -- nth occurrence of a weekday (e.g. `5#3` = third Friday)
-- **Wrap-around ranges** -- ranges where start > end wrap through the field boundary (e.g. `22-3` for hours means 22, 23, 0, 1, 2, 3)
-- **Month names** -- `JAN`-`DEC` (case-insensitive)
-- **Day-of-week names** -- `SUN`-`SAT` (case-insensitive); `7` is accepted as Sunday
-
-When both day-of-month and day-of-week are restricted (not `*`), a day matches if **either** field matches (union semantics, per the crontab spec).
 
 ## Aliases
 

@@ -248,6 +248,20 @@ var crontests = []crontest{
 		},
 	},
 
+	// Day-of-week range ending at 7 (5-7 means Fri, Sat, Sun; 7 normalizes to 0)
+	// Validates that gorhill/cronexpr#12 is handled correctly by our wrap-around logic.
+	{
+		name:   "DayOfWeekRange5to7",
+		expr:   "0 0 * * 5-7",
+		layout: "Mon 2006-01-02 15:04",
+		times: []crontimes{
+			{"2013-01-01 00:00:00", "Fri 2013-01-04 00:00"},
+			{"2013-01-04 00:00:00", "Sat 2013-01-05 00:00"},
+			{"2013-01-05 00:00:00", "Sun 2013-01-06 00:00"},
+			{"2013-01-06 00:00:00", "Fri 2013-01-11 00:00"},
+		},
+	},
+
 	// Wrap-around month range (OCT-FEB means Oct, Nov, Dec, Jan, Feb)
 	{
 		name:   "WrapMonthRange",
