@@ -10,6 +10,7 @@ import (
 
 // Expression represents a parsed cron expression. Use Parse or MustParse to create one.
 type Expression struct {
+	normalized             string // alias-expanded cron string, stored by Parse() for Describe()
 	secondList             []int
 	minuteList             []int
 	hourList               []int
@@ -60,6 +61,7 @@ func Parse(cronLine string) (*Expression, error) {
 	}
 
 	var expr Expression
+	expr.normalized = cron
 	var field = 0
 	var err error
 
