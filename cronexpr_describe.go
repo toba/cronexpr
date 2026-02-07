@@ -56,7 +56,7 @@ func (expr *Expression) Describe(opts *DescribeOptions) string {
 
 	var parts []string
 
-	timeDesc, dayOffset := describeTime(fields, srcLoc, targetLoc)
+	timeDesc, dayOffset := describeTime(fields, srcLoc, targetLoc, opts.Short)
 	if timeDesc != "" {
 		parts = append(parts, timeDesc)
 	}
@@ -157,7 +157,7 @@ func descNormalizeMonth(s string) string {
 }
 
 // describeTime returns the time description and a day offset (-1, 0, or 1) for TZ conversion.
-func describeTime(f *descFields, srcLoc, targetLoc *time.Location) (string, int) {
+func describeTime(f *descFields, srcLoc, targetLoc *time.Location, short bool) (string, int) {
 	// Intervals are timezone-agnostic
 	if f.hours == "*" && f.minutes != "*" {
 		if interval, ok := descParseInterval(f.minutes); ok {
@@ -198,7 +198,7 @@ func describeTime(f *descFields, srcLoc, targetLoc *time.Location) (string, int)
 		var times []string
 		var dayOffset int
 		for _, h := range hours {
-			t, offset := descFormatTimeWithTZ(h, f.minutes, srcLoc, targetLoc)
+			t, offset := descFormatTimeWithTZ(h, f.minutes, srcLoc, targetLoc, short)
 			times = append(times, t)
 			dayOffset = offset
 		}
@@ -208,12 +208,12 @@ func describeTime(f *descFields, srcLoc, targetLoc *time.Location) (string, int)
 	if descIsRange(f.hours) {
 		start, end := descParseRange(f.hours)
 		minDesc := describeMinutes(f.minutes)
-		startFmt, dayOffset := descFormatHourWithTZ(start, srcLoc, targetLoc)
-		endFmt, _ := descFormatHourWithTZ(end, srcLoc, targetLoc)
+		startFmt, dayOffset := descFormatHourWithTZ(start, srcLoc, targetLoc, short)
+		endFmt, _ := descFormatHourWithTZ(end, srcLoc, targetLoc, short)
 		return fmt.Sprintf("%s, %s–%s", minDesc, startFmt, endFmt), dayOffset
 	}
 
-	t, dayOffset := descFormatTimeWithTZ(f.hours, f.minutes, srcLoc, targetLoc)
+	t, dayOffset := descFormatTimeWithTZ(f.hours, f.minutes, srcLoc, targetLoc, short)
 	return "At " + t, dayOffset
 }
 
@@ -227,8 +227,8 @@ func describeMinutes(minutes string) string {
 		}
 		return fmt.Sprintf("Every %d minutes", interval)
 	}
-	min, _ := strconv.Atoi(minutes)
-	return fmt.Sprintf("At minute %d", min)
+	m, _ := strconv.Atoi(minutes)
+	return fmt.Sprintf("At minute %d", m)
 }
 
 // describeDate generates date/day description, adjusting DOW by dayOffset for TZ conversion.
@@ -239,24 +239,25 @@ func describeDate(f *descFields, dayOffset int, dNames, mNames []string) string 
 	domDesc := describeDayOfMonth(f.dayOfMonth)
 	monthDesc := describeMonth(f.month, mNames)
 
-	if domDesc != "" && dowDesc != "" {
+	switch {
+	case domDesc != "" && dowDesc != "":
 		if monthDesc != "" {
 			parts = append(parts, domDesc, "and "+dowDesc, monthDesc)
 		} else {
 			parts = append(parts, domDesc, "and "+dowDesc)
 		}
-	} else if domDesc != "" {
+	case domDesc != "":
 		if monthDesc != "" {
 			parts = append(parts, domDesc, monthDesc)
 		} else {
 			parts = append(parts, domDesc)
 		}
-	} else if dowDesc != "" {
+	case dowDesc != "":
 		parts = append(parts, dowDesc)
 		if monthDesc != "" {
 			parts = append(parts, monthDesc)
 		}
-	} else if monthDesc != "" {
+	case monthDesc != "":
 		parts = append(parts, monthDesc)
 	}
 
@@ -451,7 +452,7 @@ func descAdjustDay(day, offset int) int {
 
 // descFormatTimeWithTZ converts hour:minute from srcLoc to targetLoc in 12-hour format.
 // Returns formatted time and day offset (-1, 0, or 1) if conversion crossed a day boundary.
-func descFormatTimeWithTZ(hour, minute string, srcLoc, targetLoc *time.Location) (string, int) {
+func descFormatTimeWithTZ(hour, minute string, srcLoc, targetLoc *time.Location, short bool) (string, int) {
 	h, err := strconv.Atoi(hour)
 	if err != nil {
 		return hour + ":" + minute, 0
@@ -482,11 +483,17 @@ func descFormatTimeWithTZ(hour, minute string, srcLoc, targetLoc *time.Location)
 		displayHour = 12
 	}
 
+	if short && m == 0 {
+		return fmt.Sprintf("%d%s", displayHour, period), dayOffset
+	}
+	if short {
+		return fmt.Sprintf("%d:%02d%s", displayHour, m, period), dayOffset
+	}
 	return fmt.Sprintf("%d:%02d %s", displayHour, m, period), dayOffset
 }
 
 // descFormatHourWithTZ converts hour from srcLoc to targetLoc in 12-hour format.
-func descFormatHourWithTZ(hour string, srcLoc, targetLoc *time.Location) (string, int) {
+func descFormatHourWithTZ(hour string, srcLoc, targetLoc *time.Location, short bool) (string, int) {
 	h, err := strconv.Atoi(hour)
 	if err != nil {
 		return hour + ":00", 0
@@ -516,5 +523,8 @@ func descFormatHourWithTZ(hour string, srcLoc, targetLoc *time.Location) (string
 		displayHour = 12
 	}
 
+	if short {
+		return fmt.Sprintf("%d%s", displayHour, period), dayOffset
+	}
 	return fmt.Sprintf("%d:00 %s", displayHour, period), dayOffset
 }

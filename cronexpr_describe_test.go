@@ -79,13 +79,13 @@ func TestDescribeShort(t *testing.T) {
 		targetLoc *time.Location
 		expected  string
 	}{
-		{"weekdays short names", "0 23 * * 1-5", utc, utc, "At 11:00 PM, Mon–Fri"},
-		{"specific day short", "0 9 * * 0", utc, utc, "At 9:00 AM, only on Sun"},
-		{"multiple days short", "0 2 * * 2,4", utc, utc, "At 2:00 AM, only on Tue and Thu"},
-		{"month range short", "0 9 1 * *", utc, utc, "At 9:00 AM, on day 1 of the month"},
-		{"specific month short", "0 9 1 3 *", utc, utc, "At 9:00 AM, on day 1 of the month only in Mar"},
-		{"month range jan-jun short", "0 9 * 1-6 *", utc, utc, "At 9:00 AM, Jan–Jun"},
-		{"timezone with short day names", "0 2 * * 2,4", utc, mst, "At 7:00 PM, only on Mon and Wed"},
+		{"weekdays short names", "0 23 * * 1-5", utc, utc, "At 11PM, Mon–Fri"},
+		{"specific day short", "0 9 * * 0", utc, utc, "At 9AM, only on Sun"},
+		{"multiple days short", "0 2 * * 2,4", utc, utc, "At 2AM, only on Tue and Thu"},
+		{"month range short", "0 9 1 * *", utc, utc, "At 9AM, on day 1 of the month"},
+		{"specific month short", "0 9 1 3 *", utc, utc, "At 9AM, on day 1 of the month only in Mar"},
+		{"month range jan-jun short", "0 9 * 1-6 *", utc, utc, "At 9AM, Jan–Jun"},
+		{"timezone with short day names", "0 2 * * 2,4", utc, mst, "At 7PM, only on Mon and Wed"},
 		{"interval unchanged", "*/5 * * * *", utc, utc, "Every 5 minutes"},
 	}
 
