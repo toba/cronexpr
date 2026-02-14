@@ -162,21 +162,31 @@ func describeTime(f *descFields, srcLoc, targetLoc *time.Location, short bool) (
 	if f.hours == "*" && f.minutes != "*" {
 		if interval, ok := descParseInterval(f.minutes); ok {
 			if interval == 1 {
+				if short {
+					return "Every min", 0
+				}
 				return "Every minute", 0
+			}
+			if short {
+				return fmt.Sprintf("Every %d mins", interval), 0
 			}
 			return fmt.Sprintf("Every %d minutes", interval), 0
 		}
 		// Specific minute, every hour (e.g. @hourly = "0 * * * *")
-		minDesc := describeMinutes(f.minutes)
+		minDesc := describeMinutes(f.minutes, short)
 		return minDesc + ", every hour", 0
 	}
 
 	if f.minutes == "*" && f.hours != "*" {
 		if interval, ok := descParseInterval(f.hours); ok {
-			if interval == 1 {
-				return "Every minute, every hour", 0
+			everyMin := "Every minute"
+			if short {
+				everyMin = "Every min"
 			}
-			return fmt.Sprintf("Every minute, every %d hours", interval), 0
+			if interval == 1 {
+				return everyMin + ", every hour", 0
+			}
+			return fmt.Sprintf("%s, every %d hours", everyMin, interval), 0
 		}
 	}
 
@@ -185,7 +195,7 @@ func describeTime(f *descFields, srcLoc, targetLoc *time.Location, short bool) (
 	}
 
 	if interval, ok := descParseInterval(f.hours); ok {
-		minDesc := describeMinutes(f.minutes)
+		minDesc := describeMinutes(f.minutes, short)
 		if interval == 1 {
 			return minDesc + ", every hour", 0
 		}
@@ -207,7 +217,7 @@ func describeTime(f *descFields, srcLoc, targetLoc *time.Location, short bool) (
 
 	if descIsRange(f.hours) {
 		start, end := descParseRange(f.hours)
-		minDesc := describeMinutes(f.minutes)
+		minDesc := describeMinutes(f.minutes, short)
 		startFmt, dayOffset := descFormatHourWithTZ(start, srcLoc, targetLoc, short)
 		endFmt, _ := descFormatHourWithTZ(end, srcLoc, targetLoc, short)
 		return fmt.Sprintf("%s, %s–%s", minDesc, startFmt, endFmt), dayOffset
@@ -217,17 +227,29 @@ func describeTime(f *descFields, srcLoc, targetLoc *time.Location, short bool) (
 	return "At " + t, dayOffset
 }
 
-func describeMinutes(minutes string) string {
+func describeMinutes(minutes string, short bool) string {
 	if minutes == "*" || minutes == "0" {
+		if short {
+			return "At min 0"
+		}
 		return "At minute 0"
 	}
 	if interval, ok := descParseInterval(minutes); ok {
 		if interval == 1 {
+			if short {
+				return "Every min"
+			}
 			return "Every minute"
+		}
+		if short {
+			return fmt.Sprintf("Every %d mins", interval)
 		}
 		return fmt.Sprintf("Every %d minutes", interval)
 	}
 	m, _ := strconv.Atoi(minutes)
+	if short {
+		return fmt.Sprintf("At min %d", m)
+	}
 	return fmt.Sprintf("At minute %d", m)
 }
 

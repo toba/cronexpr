@@ -90,7 +90,8 @@ func TestDescribeShort(t *testing.T) {
 		{"weekday nearest short", "0 9 5W * *", utc, utc, "At 9AM, weekday nearest the 5th"},
 		{"month range jan-jun short", "0 9 * 1-6 *", utc, utc, "At 9AM, Jan–Jun"},
 		{"timezone with short day names", "0 2 * * 2,4", utc, mst, "At 7PM, Mon and Wed only"},
-		{"interval unchanged", "*/5 * * * *", utc, utc, "Every 5 minutes"},
+		{"interval short", "*/5 * * * *", utc, utc, "Every 5 mins"},
+		{"interval 20 short", "*/20 * * * *", utc, utc, "Every 20 mins"},
 	}
 
 	for _, tc := range tests {
