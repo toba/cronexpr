@@ -29,11 +29,11 @@ func TestDescribe(t *testing.T) {
 
 		// Day of week patterns
 		{"weekdays at 11pm", "0 23 * * 1-5", "At 11:00 PM, Monday–Friday"},
-		{"sunday at 9am", "0 9 * * 0", "At 9:00 AM, only on Sunday"},
-		{"tue and thu at 2am", "0 2 * * 2,4", "At 2:00 AM, only on Tuesday and Thursday"},
+		{"sunday at 9am", "0 9 * * 0", "At 9:00 AM, Sunday only"},
+		{"tue and thu at 2am", "0 2 * * 2,4", "At 2:00 AM, Tuesday and Thursday only"},
 
 		// Day of month patterns
-		{"first of month", "0 9 1 * *", "At 9:00 AM, on day 1 of the month"},
+		{"first of month", "0 9 1 * *", "At 9:00 AM, on the 1st of the month"},
 
 		// Hour intervals
 		{"every 4 hours", "0 */4 * * *", "At minute 0, every 4 hours"},
@@ -44,9 +44,9 @@ func TestDescribe(t *testing.T) {
 		// Aliases
 		{"@daily", "@daily", "At 12:00 AM"},
 		{"@hourly", "@hourly", "At minute 0, every hour"},
-		{"@monthly", "@monthly", "At 12:00 AM, on day 1 of the month"},
-		{"@yearly", "@yearly", "At 12:00 AM, on day 1 of the month only in January"},
-		{"@weekly", "@weekly", "At 12:00 AM, only on Sunday"},
+		{"@monthly", "@monthly", "At 12:00 AM, on the 1st of the month"},
+		{"@yearly", "@yearly", "At 12:00 AM, on the 1st of the month only in January"},
+		{"@weekly", "@weekly", "At 12:00 AM, Sunday only"},
 	}
 
 	for _, tc := range tests {
@@ -80,12 +80,16 @@ func TestDescribeShort(t *testing.T) {
 		expected  string
 	}{
 		{"weekdays short names", "0 23 * * 1-5", utc, utc, "At 11PM, Mon–Fri"},
-		{"specific day short", "0 9 * * 0", utc, utc, "At 9AM, only on Sun"},
-		{"multiple days short", "0 2 * * 2,4", utc, utc, "At 2AM, only on Tue and Thu"},
-		{"month range short", "0 9 1 * *", utc, utc, "At 9AM, on day 1 of the month"},
-		{"specific month short", "0 9 1 3 *", utc, utc, "At 9AM, on day 1 of the month only in Mar"},
+		{"specific day short", "0 9 * * 0", utc, utc, "At 9AM, Sunday only"},
+		{"multiple days short", "0 2 * * 2,4", utc, utc, "At 2AM, Tue and Thu only"},
+		{"day of month short", "0 9 1 * *", utc, utc, "At 9AM, on the 1st"},
+		{"day of month with month short", "0 9 1 3 *", utc, utc, "At 9AM, on the 1st only in Mar"},
+		{"day list short", "0 9 1,15 * *", utc, utc, "At 9AM, on the 1st and 15th"},
+		{"day range short", "0 9 1-15 * *", utc, utc, "At 9AM, days 1–15th"},
+		{"last day short", "0 9 L * *", utc, utc, "At 9AM, last day of month"},
+		{"weekday nearest short", "0 9 5W * *", utc, utc, "At 9AM, weekday nearest the 5th"},
 		{"month range jan-jun short", "0 9 * 1-6 *", utc, utc, "At 9AM, Jan–Jun"},
-		{"timezone with short day names", "0 2 * * 2,4", utc, mst, "At 7PM, only on Mon and Wed"},
+		{"timezone with short day names", "0 2 * * 2,4", utc, mst, "At 7PM, Mon and Wed only"},
 		{"interval unchanged", "*/5 * * * *", utc, utc, "Every 5 minutes"},
 	}
 
@@ -115,7 +119,7 @@ func TestDescribeTimezone(t *testing.T) {
 		expected  string
 	}{
 		{"9am UTC to MST", "0 9 * * *", utc, mst, "At 2:00 AM"},
-		{"2am UTC to MST with day change", "0 2 * * 2,4", utc, mst, "At 7:00 PM, only on Monday and Wednesday"},
+		{"2am UTC to MST with day change", "0 2 * * 2,4", utc, mst, "At 7:00 PM, Monday and Wednesday only"},
 		{"midnight UTC to MST", "0 0 * * *", utc, mst, "At 5:00 PM"},
 		{"interval unchanged", "*/20 * * * *", utc, mst, "Every 20 minutes"},
 		{"same timezone", "0 9 * * *", utc, utc, "At 9:00 AM"},

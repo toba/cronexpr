@@ -61,7 +61,7 @@ func (expr *Expression) Describe(opts *DescribeOptions) string {
 		parts = append(parts, timeDesc)
 	}
 
-	dateDesc := describeDate(fields, dayOffset, dNames, mNames)
+	dateDesc := describeDate(fields, dayOffset, dNames, mNames, opts.Short)
 	if dateDesc != "" {
 		parts = append(parts, dateDesc)
 	}
@@ -232,11 +232,11 @@ func describeMinutes(minutes string) string {
 }
 
 // describeDate generates date/day description, adjusting DOW by dayOffset for TZ conversion.
-func describeDate(f *descFields, dayOffset int, dNames, mNames []string) string {
+func describeDate(f *descFields, dayOffset int, dNames, mNames []string, short bool) string {
 	var parts []string
 
 	dowDesc := describeDayOfWeek(f.dayOfWeek, dayOffset, dNames)
-	domDesc := describeDayOfMonth(f.dayOfMonth)
+	domDesc := describeDayOfMonth(f.dayOfMonth, short)
 	monthDesc := describeMonth(f.month, mNames)
 
 	switch {
@@ -317,40 +317,60 @@ func describeDayOfWeek(dow string, dayOffset int, names []string) string {
 				dayNamesList = append(dayNamesList, names[n])
 			}
 		}
-		return "only on " + descJoinWithAnd(dayNamesList)
+		return descJoinWithAnd(dayNamesList) + " only"
 	}
 
 	d, err := strconv.Atoi(dow)
 	if err == nil && d >= 0 && d <= 6 {
 		d = descAdjustDay(d, dayOffset)
-		return "only on " + names[d]
+		return descDayNames[d] + " only"
 	}
 
 	return ""
 }
 
-func describeDayOfMonth(dom string) string {
+func describeDayOfMonth(dom string, short bool) string {
 	if dom == "*" {
 		return ""
 	}
 
 	if strings.ToLower(dom) == "l" {
+		if short {
+			return "last day of month"
+		}
 		return "on the last day of the month"
 	}
 
 	if strings.HasSuffix(strings.ToUpper(dom), "W") {
 		day := strings.TrimSuffix(strings.TrimSuffix(dom, "w"), "W")
-		return fmt.Sprintf("on the weekday nearest day %s of the month", day)
+		d, _ := strconv.Atoi(day)
+		if short {
+			return fmt.Sprintf("weekday nearest the %s", descOrdinal(d))
+		}
+		return fmt.Sprintf("on the weekday nearest the %s of the month", descOrdinal(d))
 	}
 
 	if descIsRange(dom) {
 		start, end := descParseRange(dom)
-		return fmt.Sprintf("on days %s–%s of the month", start, end)
+		startN, _ := strconv.Atoi(start)
+		endN, _ := strconv.Atoi(end)
+		if short {
+			return fmt.Sprintf("days %s–%s", start, descOrdinal(endN))
+		}
+		return fmt.Sprintf("on the %s–%s of the month", descOrdinal(startN), descOrdinal(endN))
 	}
 
 	if descIsList(dom) {
 		days := descSplitList(dom)
-		return "on days " + descJoinWithAnd(days) + " of the month"
+		var ordinals []string
+		for _, d := range days {
+			n, _ := strconv.Atoi(d)
+			ordinals = append(ordinals, descOrdinal(n))
+		}
+		if short {
+			return "on the " + descJoinWithAnd(ordinals)
+		}
+		return "on the " + descJoinWithAnd(ordinals) + " of the month"
 	}
 
 	if interval, ok := descParseInterval(dom); ok {
@@ -360,7 +380,28 @@ func describeDayOfMonth(dom string) string {
 		return fmt.Sprintf("every %d days", interval)
 	}
 
-	return fmt.Sprintf("on day %s of the month", dom)
+	d, _ := strconv.Atoi(dom)
+	if short {
+		return fmt.Sprintf("on the %s", descOrdinal(d))
+	}
+	return fmt.Sprintf("on the %s of the month", descOrdinal(d))
+}
+
+// descOrdinal returns an integer with its English ordinal suffix (1st, 2nd, 3rd, etc.).
+func descOrdinal(n int) string {
+	if n%100 >= 11 && n%100 <= 13 {
+		return strconv.Itoa(n) + "th"
+	}
+	switch n % 10 {
+	case 1:
+		return strconv.Itoa(n) + "st"
+	case 2:
+		return strconv.Itoa(n) + "nd"
+	case 3:
+		return strconv.Itoa(n) + "rd"
+	default:
+		return strconv.Itoa(n) + "th"
+	}
 }
 
 func describeMonth(month string, names []string) string {
