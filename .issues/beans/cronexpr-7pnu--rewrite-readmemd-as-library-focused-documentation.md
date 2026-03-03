@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T16:48:17Z
 updated_at: 2026-02-07T16:48:47Z
+sync:
+    github:
+        issue_number: "7"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 Replace the current cron-tutorial-style README with a library-focused document covering: API, usage examples, supported formats, extensions, aliases, and limitations.

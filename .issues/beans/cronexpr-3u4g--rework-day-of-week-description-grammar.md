@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-14T17:03:10Z
 updated_at: 2026-02-14T17:04:06Z
+sync:
+    github:
+        issue_number: "9"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 Move 'only' suffix to end of DOW descriptions and use full day names for single days in short mode. Changes: 'only on Sunday' → 'Sunday only', 'only on Tue and Thu' → 'Tue and Thu only', short single day uses full name.

@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T16:26:58Z
 updated_at: 2026-02-07T16:27:34Z
+sync:
+    github:
+        issue_number: "10"
+        synced_at: "2026-03-03T17:41:45Z"
 ---
 
 Remove CLI artifacts: delete .goreleaser.yaml, remove dist/ from .gitignore, remove dead expression field, update README.md and CLAUDE.md to remove CLI references.

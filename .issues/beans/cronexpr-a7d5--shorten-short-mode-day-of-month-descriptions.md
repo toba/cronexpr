@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-14T16:47:08Z
 updated_at: 2026-02-14T16:50:57Z
+sync:
+    github:
+        issue_number: "5"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 When `DescribeOptions.Short` is true, the day-of-month descriptions should be more compact:

@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T17:06:30Z
 updated_at: 2026-02-07T17:09:08Z
+sync:
+    github:
+        issue_number: "4"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 Replace all regex-based parsing in cronexpr_parse.go with strings.Cut/strings.HasSuffix + map lookups. This eliminates the regexp and sync imports entirely and should measurably speed up BenchmarkParse.

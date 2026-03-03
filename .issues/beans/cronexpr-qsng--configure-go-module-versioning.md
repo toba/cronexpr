@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T16:46:22Z
 updated_at: 2026-02-07T16:46:38Z
+sync:
+    github:
+        issue_number: "3"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 Replace GoReleaser workflow with library-appropriate release workflow and update CLAUDE.md Go version

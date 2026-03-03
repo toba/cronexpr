@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T16:52:50Z
 updated_at: 2026-02-07T16:54:57Z
+sync:
+    github:
+        issue_number: "11"
+        synced_at: "2026-03-03T17:41:45Z"
 ---
 
 Behavior-preserving refactors: fix duplicate month regex, extract year range constants, field count constants, daysPerWeek constant, replace manual weekday index with loop, consolidate field handlers, extract interval validation helper.

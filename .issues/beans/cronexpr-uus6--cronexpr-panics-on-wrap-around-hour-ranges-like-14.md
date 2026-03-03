@@ -6,6 +6,10 @@ type: bug
 priority: normal
 created_at: 2026-02-07T16:28:17Z
 updated_at: 2026-02-07T16:32:41Z
+sync:
+    github:
+        issue_number: "8"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 ## Problem

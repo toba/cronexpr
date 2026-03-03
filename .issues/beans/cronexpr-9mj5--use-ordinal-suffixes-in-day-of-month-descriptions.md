@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-14T16:57:31Z
 updated_at: 2026-02-14T16:58:20Z
+sync:
+    github:
+        issue_number: "2"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 Update describeDayOfMonth to use ordinal suffixes (1st, 2nd, 3rd, etc.) instead of plain numbers for both short and long modes.

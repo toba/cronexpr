@@ -3,8 +3,13 @@
 title: Modernize cronexpr to Go 1.24
 status: in-progress
 type: task
+priority: normal
 created_at: 2026-02-07T16:15:58Z
 updated_at: 2026-02-07T16:15:58Z
+sync:
+    github:
+        issue_number: "6"
+        synced_at: "2026-03-03T17:41:43Z"
 ---
 
 - [ ] Create go.mod

@@ -1,4 +1,7 @@
-issues:
+todo:
   default_status: draft
   default_type: task
   path: .issues
+  sync:
+    github:
+      repo: toba/cronexpr

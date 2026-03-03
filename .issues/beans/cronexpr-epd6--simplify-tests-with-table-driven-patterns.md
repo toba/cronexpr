@@ -6,6 +6,10 @@ type: task
 priority: normal
 created_at: 2026-02-07T16:57:48Z
 updated_at: 2026-02-07T16:59:48Z
+sync:
+    github:
+        issue_number: "1"
+        synced_at: "2026-03-03T17:41:44Z"
 ---
 
 Add name fields to crontest, refactor TestZero/TestNextN/TestInterval into table-driven tests, fix bugs
